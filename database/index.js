@@ -22,8 +22,8 @@ sequelize = new Sequelize(currentEnvConfig.database, currentEnvConfig.username, 
   dialect: 'mysql',
   timezone: '-06:00',
   pool: {
-    max: 10,
-    min: 2,
+    max: 5,
+    min: 1,
     acquire: 30000,
     idle: 10000
   },
