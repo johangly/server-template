@@ -14,8 +14,11 @@ const actionFromMethod = (method, path) => {
     return method.toLowerCase();
 };
 
+const stripQuery = (path) => path.split('?')[0];
+
 const resourceFromPath = (path) => {
-    const segments = path.replace(/^\/+|\/+$/g, '').split('/');
+    const clean = stripQuery(path);
+    const segments = clean.replace(/^\/+|\/+$/g, '').split('/');
     const apiIndex = segments.findIndex((s) => s === 'api');
     if (apiIndex !== -1 && segments[apiIndex + 1]) {
         return segments[apiIndex + 1];
@@ -24,10 +27,27 @@ const resourceFromPath = (path) => {
 };
 
 const resourceIdFromPath = (path) => {
-    const segments = path.replace(/^\/+|\/+$/g, '').split('/');
+    const clean = stripQuery(path);
+    const segments = clean.replace(/^\/+|\/+$/g, '').split('/');
     for (const seg of segments) {
         if (/^\d+$/.test(seg)) return seg;
     }
+    return null;
+};
+
+const getEmail = (req, res) => {
+    if (req.user?.email) return req.user.email;
+    if (req.body?.email) return req.body.email;
+    const body = responseBodies.get(res);
+    if (body?.user?.email) return body.user.email;
+    if (body?.userEmail) return body.userEmail;
+    return null;
+};
+
+const getUserId = (req, res) => {
+    if (req.user?.id) return req.user.id;
+    const body = responseBodies.get(res);
+    if (body?.user?.id) return body.user.id;
     return null;
 };
 
@@ -60,6 +80,8 @@ async function saveAudit(req, res, action, resource) {
         }
 
         const resourceId = resourceIdFromPath(req.originalUrl) || req.params?.id || null;
+        const email = getEmail(req, res);
+        const userId = getUserId(req, res);
 
         let oldValues = null;
         if ((action === 'update' || action === 'delete') && resourceId && req.params?.id) {
@@ -88,16 +110,11 @@ async function saveAudit(req, res, action, resource) {
             ? responseBody
             : null;
 
-        const description = generateDescription(
-            action,
-            resource,
-            resourceId,
-            req.user?.email
-        );
+        const description = generateDescription(action, resource, resourceId, email);
 
         await db.AuditLog.create({
-            userId: req.user?.id || null,
-            userEmail: req.user?.email || null,
+            userId,
+            userEmail: email,
             action,
             resource,
             resourceId: resourceId?.toString() || null,
