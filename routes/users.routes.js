@@ -6,8 +6,11 @@ import { hashPassword, comparePassword } from '../utils/hashedAndComparePassword
 import { verifyToken, isAdmin } from '../middleware/authMiddleware.js';
 import { preventPrivilegeEscalation } from '../middleware/privilegeMiddleware.js';
 import logger from "../utils/logger.js";
+import { autoAudit } from '../middleware/auditMiddleware.js';
 
 const router = express.Router()
+
+router.use(autoAudit());
 
 const generateUserCode = () => 'USR' + Math.floor(1000 + Math.random() * 9000);
 

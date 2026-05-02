@@ -3,8 +3,11 @@ import express from 'express';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { hasPermission } from '../middleware/permissionMiddleware.js';
 import { canManageRole, preventPrivilegeEscalation } from '../middleware/privilegeMiddleware.js';
+import { autoAudit } from '../middleware/auditMiddleware.js';
 
 const router = express.Router();
+
+router.use(autoAudit());
 
 router.get('/', [verifyToken, hasPermission('roles', 'read')], async (req, res) => {
     try {
