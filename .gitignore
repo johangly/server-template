@@ -4,10 +4,4 @@ npm-debug.log
 .env
 .DS_Store
 docker-data/
-error.log
-combined.log
-combined.*
 *.log
-init-db/*
-
-backups/*
