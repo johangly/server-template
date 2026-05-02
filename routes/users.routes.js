@@ -1,0 +1,150 @@
+import db from '../database/index.js'
+import express from 'express'
+import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
+import { hashPassword, comparePassword } from '../utils/hashedAndComparePassword.js'
+import { verifyToken, isAdmin } from '../middleware/authMiddleware.js';
+import logger from "../utils/logger.js";
+
+const router = express.Router()
+
+const generateUserCode = () => 'USR' + Math.floor(1000 + Math.random() * 9000);
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5, // Límite de 5 peticiones por IP
+    message: 'Demasiados intentos de inicio de sesión, por favor intente de nuevo en 15 minutos.',
+    standardHeaders: true, // Devuelve la información del límite en los encabezados `RateLimit-*`
+    legacyHeaders: false, // Deshabilita los encabezados `X-RateLimit-*`
+});
+
+router.get('/', [verifyToken, isAdmin], async (req, res) => {
+    try {
+        const users = await db.Users.findAll({
+            include: [{ model: db.Role, as: 'userRole', attributes: ['id', 'name'] }]
+        })
+        res.json(users)
+    } catch (error) {
+        logger.info('Failed to fetch users', error)
+        res.status(500).json({ error: 'Failed to fetch users' })
+    }
+})
+
+router.post('/create-user', [verifyToken, isAdmin], async (req, res) => {
+    const { name, email, password, roleId } = req.body
+    const code = generateUserCode()
+    const passwordHash = await hashPassword(password)
+
+    try {
+        const role = await db.Role.findAll()
+        const roleOfUser = roleId ? await db.Role.findByPk(roleId) : role.filter(r => r.name.toLowerCase() === 'user')[0].id
+        if (!roleOfUser) {
+            return res.status(404).json({ error: 'Role not found' })
+        }
+        
+        const newUser = await db.Users.create({
+            code,
+            name,
+            email,
+            password: passwordHash,
+            role: roleOfUser.dataValues.id,
+            isActive: true
+        })
+        logger.info(`User created: ${newUser.name}`)
+        res.status(201).json(newUser)
+    } catch (error) {
+        logger.error('Failed to create user', error)
+        res.status(500).json({ error: 'Failed to create user' })
+    }
+})
+router.get('/:id',[verifyToken, isAdmin], async (req, res) => {
+    const { id } = req.params
+    try {
+        const user = await db.Users.findByPk(id)
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' })
+        }
+        return res.json(user)
+    } catch (error) {
+        logger.error('Failed to fetch user', error)
+        res.status(500).json({ error: 'Failed to fetch user' })
+    }
+})
+router.put('/update-user/:id', [verifyToken, isAdmin], async (req, res) => {
+    const { id } = req.params
+    const { name, email, password, roleId } = req.body
+
+    try {
+        const role = await db.Role.findAll()
+        const roleOfUser = roleId ? await db.Role.findByPk(roleId, { attributes: ['id'] }) : role.filter(r => r.name.toLowerCase() === 'user')[0]
+        const roleOfUserId = roleOfUser ? roleOfUser.id : null
+
+        if (!roleOfUser) {
+            return res.status(404).json({ error: 'Role not found' })
+        }
+        const user = id ? await db.Users.findByPk(id) : null
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' })
+        }
+        const updateData = { name, email, role: roleOfUserId, isActive: true };
+        if (password) {
+            updateData.password = await hashPassword(password);
+        }
+
+        await user.update(updateData);
+        res.json(user)
+    } catch (error) {
+        logger.error('Failed to update user', error)
+        res.status(500).json({ error: 'Failed to update user' })
+    }
+})
+router.post('/login', loginLimiter, async (req, res) => {
+    const { email, password } = req.body
+
+    try {
+        const user = await db.Users.findOne({ where: { email } })
+
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid credentials' })
+        }
+        const isMatch = await comparePassword(password, user.dataValues.password)
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid credentials' })
+        }
+        const role = await db.Role.findByPk(user.role)
+        const userData = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            code: user.code,
+            roleId: user.role,
+            isActive: user.isActive,
+            role: { name: role.name, id: role.id }
+        };
+
+        const token = jwt.sign(
+            userData,
+            process.env.JWT_SECRET, 
+            { expiresIn: process.env.JWT_EXPIRES_IN || '4h' } 
+        );
+
+        res.json({
+            token,
+            message: 'Login successful',
+            user: userData
+        })
+    } catch (error) {
+        logger.error('Failed to login', error)
+        res.status(500).json({ error: 'Failed to login' })
+    }
+})
+router.post('/logout', async (req, res) => {
+    const { email } = req.body
+    logger.info(`User logged out: ${email}`)
+    await db.Users.update({
+        lastLogin: new Date()
+    }, { where: { email } })
+    res.status(200).json({ message: 'Logout successful' })
+})
+export default router     

@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: verificationsim-worker
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - WORKER_HEALTHCHECK_PORT=8888
+    ports:
+      - "8888:8888"
+    networks:
+      - worker-network
+
+networks:
+  worker-network:
+    driver: bridge
