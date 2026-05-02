@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import db from "./database/index.js";
 import roleRoutes from "./routes/role.routes.js";
 import userRoutes from "./routes/users.routes.js";
+import permissionRoutes from "./routes/permission.routes.js";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import jwt from 'jsonwebtoken';
@@ -54,6 +55,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(`${API_PREFIX}/roles`, roleRoutes);
 app.use(`${API_PREFIX}/users`, userRoutes);
+app.use(`${API_PREFIX}/permissions`, permissionRoutes);
 
 // Endpoint para verificar conexión
 const apiLimiter = rateLimit({

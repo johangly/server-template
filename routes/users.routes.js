@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import { hashPassword, comparePassword } from '../utils/hashedAndComparePassword.js'
 import { verifyToken, isAdmin } from '../middleware/authMiddleware.js';
+import { preventPrivilegeEscalation } from '../middleware/privilegeMiddleware.js';
 import logger from "../utils/logger.js";
 
 const router = express.Router()
@@ -11,11 +12,11 @@ const router = express.Router()
 const generateUserCode = () => 'USR' + Math.floor(1000 + Math.random() * 9000);
 
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 5, // Límite de 5 peticiones por IP
+    windowMs: 15 * 60 * 1000,
+    max: 5,
     message: 'Demasiados intentos de inicio de sesión, por favor intente de nuevo en 15 minutos.',
-    standardHeaders: true, // Devuelve la información del límite en los encabezados `RateLimit-*`
-    legacyHeaders: false, // Deshabilita los encabezados `X-RateLimit-*`
+    standardHeaders: true,
+    legacyHeaders: false,
 });
 
 router.get('/', [verifyToken, isAdmin], async (req, res) => {
@@ -30,7 +31,7 @@ router.get('/', [verifyToken, isAdmin], async (req, res) => {
     }
 })
 
-router.post('/create-user', [verifyToken, isAdmin], async (req, res) => {
+router.post('/create-user', [verifyToken, isAdmin, preventPrivilegeEscalation], async (req, res) => {
     const { name, email, password, roleId } = req.body
     const code = generateUserCode()
     const passwordHash = await hashPassword(password)
@@ -57,6 +58,7 @@ router.post('/create-user', [verifyToken, isAdmin], async (req, res) => {
         res.status(500).json({ error: 'Failed to create user' })
     }
 })
+
 router.get('/:id',[verifyToken, isAdmin], async (req, res) => {
     const { id } = req.params
     try {
@@ -70,9 +72,10 @@ router.get('/:id',[verifyToken, isAdmin], async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch user' })
     }
 })
-router.put('/update-user/:id', [verifyToken, isAdmin], async (req, res) => {
+
+router.put('/update-user/:id', [verifyToken, isAdmin, preventPrivilegeEscalation], async (req, res) => {
     const { id } = req.params
-    const { name, email, password, roleId } = req.body
+    const { name, email, password, roleId, isActive } = req.body
 
     try {
         const role = await db.Role.findAll()
@@ -87,7 +90,10 @@ router.put('/update-user/:id', [verifyToken, isAdmin], async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' })
         }
-        const updateData = { name, email, role: roleOfUserId, isActive: true };
+        const updateData = { name, email, role: roleOfUserId };
+        if (isActive !== undefined) {
+            updateData.isActive = isActive;
+        }
         if (password) {
             updateData.password = await hashPassword(password);
         }
@@ -99,6 +105,7 @@ router.put('/update-user/:id', [verifyToken, isAdmin], async (req, res) => {
         res.status(500).json({ error: 'Failed to update user' })
     }
 })
+
 router.post('/login', loginLimiter, async (req, res) => {
     const { email, password } = req.body
 
@@ -108,11 +115,27 @@ router.post('/login', loginLimiter, async (req, res) => {
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' })
         }
+        if (!user.isActive) {
+            return res.status(403).json({ error: 'Account is deactivated. Contact an administrator.' })
+        }
         const isMatch = await comparePassword(password, user.dataValues.password)
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid credentials' })
         }
-        const role = await db.Role.findByPk(user.role)
+        const role = await db.Role.findByPk(user.role, {
+            include: [{
+                model: db.Permission,
+                as: 'permissions',
+                through: { attributes: [] },
+            }],
+        })
+        const permissions = role ? role.permissions.map((p) => ({
+            id: p.id,
+            name: p.name,
+            resource: p.resource,
+            action: p.action,
+        })) : [];
+
         const userData = {
             id: user.id,
             name: user.name,
@@ -120,7 +143,8 @@ router.post('/login', loginLimiter, async (req, res) => {
             code: user.code,
             roleId: user.role,
             isActive: user.isActive,
-            role: { name: role.name, id: role.id }
+            role: { name: role.name, id: role.id },
+            permissions,
         };
 
         const token = jwt.sign(
@@ -139,6 +163,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         res.status(500).json({ error: 'Failed to login' })
     }
 })
+
 router.post('/logout', async (req, res) => {
     const { email } = req.body
     logger.info(`User logged out: ${email}`)
@@ -147,4 +172,20 @@ router.post('/logout', async (req, res) => {
     }, { where: { email } })
     res.status(200).json({ message: 'Logout successful' })
 })
-export default router     
+
+router.delete('/delete-user/:id', [verifyToken, isAdmin], async (req, res) => {
+    const { id } = req.params
+    try {
+        const user = await db.Users.findByPk(id)
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' })
+        }
+        await user.destroy()
+        res.json({ message: 'User deleted successfully' })
+    } catch (error) {
+        logger.error('Failed to delete user', error)
+        res.status(500).json({ error: 'Failed to delete user' })
+    }
+})
+
+export default router

@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
+import db from '../database/index.js';
 
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -8,13 +9,37 @@ export const verifyToken = (req, res, next) => {
         return res.status(401).json({ error: 'No token provided' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'Token is not valid' });
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+
+        if (decoded.roleId) {
+            const role = await db.Role.findByPk(decoded.roleId, {
+                include: [{
+                    model: db.Permission,
+                    as: 'permissions',
+                    through: { attributes: [] },
+                }],
+            });
+
+            if (role) {
+                req.user.permissions = role.permissions.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    resource: p.resource,
+                    action: p.action,
+                }));
+            } else {
+                req.user.permissions = [];
+            }
+        } else {
+            req.user.permissions = [];
         }
-        req.user = user;
+
         next();
-    });
+    } catch (err) {
+        return res.status(403).json({ error: 'Token is not valid' });
+    }
 };
 
 export const isAdmin = (req, res, next) => {
