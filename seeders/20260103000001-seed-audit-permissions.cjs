@@ -23,11 +23,11 @@ module.exports = {
 		await queryInterface.bulkInsert('permission', permissions, {});
 
 		const [roles] = await queryInterface.sequelize.query(
-			'SELECT id FROM role WHERE name = "Admin"'
+			"SELECT id FROM role WHERE name = 'Admin'"
 		);
 
 		const [newPerms] = await queryInterface.sequelize.query(
-			'SELECT id FROM permission WHERE resource IN ("audit-logs", "audit-config")'
+			"SELECT id FROM permission WHERE resource IN ('audit-logs', 'audit-config')"
 		);
 
 		if (roles.length > 0 && newPerms.length > 0) {
@@ -45,7 +45,7 @@ module.exports = {
 
 	async down(queryInterface, Sequelize) {
 		await queryInterface.sequelize.query(
-			'DELETE FROM permission WHERE resource IN ("audit-logs", "audit-config")'
+			"DELETE FROM permission WHERE resource IN ('audit-logs', 'audit-config')"
 		);
 	},
 };

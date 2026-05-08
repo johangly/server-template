@@ -11,6 +11,8 @@ import userRoutes from "./routes/users.routes.js";
 import permissionRoutes from "./routes/permission.routes.js";
 import auditRoutes from "./routes/audit.routes.js";
 import auditConfigRoutes from "./routes/auditConfig.routes.js";
+import systemConfigRoutes from "./routes/systemConfig.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import jwt from 'jsonwebtoken';
@@ -60,6 +62,8 @@ app.use(`${API_PREFIX}/users`, userRoutes);
 app.use(`${API_PREFIX}/permissions`, permissionRoutes);
 app.use(`${API_PREFIX}/audit-logs`, auditRoutes);
 app.use(`${API_PREFIX}/audit-config`, auditConfigRoutes);
+app.use(`${API_PREFIX}/system-config`, systemConfigRoutes);
+app.use(`${API_PREFIX}/auth`, authRoutes);
 
 // Endpoint para verificar conexión
 const apiLimiter = rateLimit({

@@ -7,6 +7,7 @@ import { verifyToken, isAdmin } from '../middleware/authMiddleware.js';
 import { preventPrivilegeEscalation } from '../middleware/privilegeMiddleware.js';
 import logger from "../utils/logger.js";
 import { autoAudit } from '../middleware/auditMiddleware.js';
+import { paginate } from '../utils/paginate.js';
 
 const router = express.Router()
 
@@ -24,10 +25,16 @@ const loginLimiter = rateLimit({
 
 router.get('/', [verifyToken, isAdmin], async (req, res) => {
     try {
-        const users = await db.Users.findAll({
-            include: [{ model: db.Role, as: 'userRole', attributes: ['id', 'name'] }]
-        })
-        res.json(users)
+        const result = await paginate(db.Users, {
+            page: req.query.page || 1,
+            limit: Math.min(parseInt(req.query.limit) || 10, 100),
+            search: req.query.search,
+            searchFields: ['name', 'email', 'code'],
+            filters: req.query.isActive !== undefined ? { isActive: req.query.isActive === 'true' } : {},
+            order: [['createdAt', 'DESC']],
+            include: [{ model: db.Role, as: 'userRole', attributes: ['id', 'name'] }],
+        });
+        res.json(result);
     } catch (error) {
         logger.info('Failed to fetch users', error)
         res.status(500).json({ error: 'Failed to fetch users' })
@@ -118,13 +125,46 @@ router.post('/login', loginLimiter, async (req, res) => {
         if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' })
         }
+
+        if (user.lockUntil && new Date(user.lockUntil) > new Date()) {
+            const minutesLeft = Math.ceil((new Date(user.lockUntil) - Date.now()) / 60000);
+            return res.status(429).json({ 
+                error: `Cuenta bloqueada. Intente de nuevo en ${minutesLeft} minutos` 
+            });
+        }
+
         if (!user.isActive) {
             return res.status(403).json({ error: 'Account is deactivated. Contact an administrator.' })
         }
+
         const isMatch = await comparePassword(password, user.dataValues.password)
         if (!isMatch) {
-            return res.status(401).json({ error: 'Invalid credentials' })
+            const maxAttempts = process.env.MAX_LOGIN_ATTEMPTS ? parseInt(process.env.MAX_LOGIN_ATTEMPTS) : 5;
+            const lockDuration = process.env.LOCK_DURATION_MINUTES ? parseInt(process.env.LOCK_DURATION_MINUTES) : 15;
+
+            user.loginAttempts = (user.loginAttempts || 0) + 1;
+
+            if (user.loginAttempts >= maxAttempts) {
+                user.lockUntil = new Date(Date.now() + lockDuration * 60 * 1000);
+                user.loginAttempts = 0;
+                await user.save();
+                return res.status(429).json({ 
+                    error: `Demasiados intentos fallidos. Cuenta bloqueada por ${lockDuration} minutos` 
+                });
+            }
+
+            await user.save();
+            const remaining = maxAttempts - user.loginAttempts;
+            return res.status(401).json({ 
+                error: 'Invalid credentials',
+                remainingAttempts: remaining 
+            });
         }
+
+        user.loginAttempts = 0;
+        user.lockUntil = null;
+        await user.save();
+
         const role = await db.Role.findByPk(user.role, {
             include: [{
                 model: db.Permission,
@@ -188,6 +228,21 @@ router.delete('/delete-user/:id', [verifyToken, isAdmin], async (req, res) => {
     } catch (error) {
         logger.error('Failed to delete user', error)
         res.status(500).json({ error: 'Failed to delete user' })
+    }
+})
+
+router.put('/unlock-user/:id', [verifyToken, isAdmin], async (req, res) => {
+    const { id } = req.params
+    try {
+        const user = await db.Users.findByPk(id)
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' })
+        }
+        await user.update({ loginAttempts: 0, lockUntil: null })
+        res.json({ message: 'User unlocked successfully' })
+    } catch (error) {
+        logger.error('Failed to unlock user', error)
+        res.status(500).json({ error: 'Failed to unlock user' })
     }
 })
 

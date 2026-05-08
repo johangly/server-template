@@ -4,7 +4,7 @@
 module.exports = {
 	async up(queryInterface, Sequelize) {
 		const [roles] = await queryInterface.sequelize.query(
-			'SELECT id FROM role WHERE name = "Admin"'
+			"SELECT id FROM role WHERE name = 'Admin'"
 		);
 
 		const [permissions] = await queryInterface.sequelize.query(

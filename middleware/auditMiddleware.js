@@ -2,19 +2,87 @@ import db from '../database/index.js';
 
 const responseBodies = new WeakMap();
 
+// Cache en memoria para configuraciones de auditoría
+const configCache = new Map();
+let cacheInitialized = false;
+
+// Función para cargar todas las configuraciones en memoria
+async function loadAuditConfigs() {
+  try {
+    const AuditConfig = db.AuditConfig;
+    if (!AuditConfig) return;
+    
+    const configs = await AuditConfig.findAll();
+    configCache.clear();
+    configs.forEach(config => {
+      const key = `${config.resource}:${config.action}`;
+      configCache.set(key, config.enabled);
+    });
+    cacheInitialized = true;
+  } catch (err) {
+    console.error('Error loading audit configs:', err.message);
+  }
+}
+
+// Función para verificar si una auditoría está habilitada (usa cache)
+async function isAuditEnabled(resource, action) {
+  if (!cacheInitialized) {
+    await loadAuditConfigs();
+  }
+  
+  const key = `${resource}:${action}`;
+  
+  // Si existe en cache, usar el valor cacheado
+  if (configCache.has(key)) {
+    return configCache.get(key);
+  }
+  
+  // Si no existe en cache, crear con valor por defecto (habilitado)
+  try {
+    const AuditConfig = db.AuditConfig;
+    if (AuditConfig) {
+      await AuditConfig.create({ resource, action, enabled: true });
+      configCache.set(key, true);
+    }
+    return true;
+  } catch (err) {
+    // Si ya existe (race condition), recargar cache
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      await loadAuditConfigs();
+      return configCache.get(key) ?? true;
+    }
+    console.error('Error creating audit config:', err.message);
+    return true; // Por defecto, habilitado
+  }
+}
+
+// Función para actualizar el cache cuando se modifica una config
+export function updateAuditConfigCache(resource, action, enabled) {
+  const key = `${resource}:${action}`;
+  configCache.set(key, enabled);
+}
+
+const stripQuery = (path) => path.split('?')[0];
+
 const actionFromMethod = (method, path) => {
-    const lower = path.toLowerCase();
-    if (method === 'POST' && lower.includes('login')) return 'login';
-    if (method === 'POST' && lower.includes('logout')) return 'logout';
-    if (method === 'POST' && lower.includes('create')) return 'create';
-    if (method === 'POST') return 'create';
+    const clean = stripQuery(path);
+    const segments = clean.replace(/^\/+|\/+$/g, '').split('/');
+    const lastSegment = (segments[segments.length - 1] || '').toLowerCase();
+
+    if (method === 'POST') {
+        const specialActions = ['login', 'logout', 'create'];
+        for (const action of specialActions) {
+            if (lastSegment === action || lastSegment.startsWith(action + '-') || lastSegment.startsWith(action + '/')) {
+                return action;
+            }
+        }
+        return 'create';
+    }
     if (method === 'GET') return 'read';
     if (method === 'PUT') return 'update';
     if (method === 'DELETE') return 'delete';
     return method.toLowerCase();
 };
-
-const stripQuery = (path) => path.split('?')[0];
 
 const resourceFromPath = (path) => {
     const clean = stripQuery(path);
@@ -29,13 +97,25 @@ const resourceFromPath = (path) => {
 const resourceIdFromPath = (path) => {
     const clean = stripQuery(path);
     const segments = clean.replace(/^\/+|\/+$/g, '').split('/');
-    for (const seg of segments) {
-        if (/^\d+$/.test(seg)) return seg;
+    for (let i = segments.length - 1; i >= 0; i--) {
+        if (/^\d+$/.test(segments[i])) return segments[i];
     }
     return null;
 };
 
-const getEmail = (req, res) => {
+const resolveModel = (resource) => {
+    const overrides = {
+        'users': db.Users,
+        'roles': db.Role,
+        'permissions': db.Permission,
+    };
+    if (overrides[resource]) return overrides[resource];
+    const modelName = resource.charAt(0).toUpperCase() + resource.slice(1);
+    return db[modelName] || null;
+};
+
+const getEmail = (req, res, capturedData) => {
+    if (capturedData?.email) return capturedData.email;
     if (req.user?.email) return req.user.email;
     if (req.body?.email) return req.body.email;
     const body = responseBodies.get(res);
@@ -44,7 +124,8 @@ const getEmail = (req, res) => {
     return null;
 };
 
-const getUserId = (req, res) => {
+const getUserId = (req, res, capturedData) => {
+    if (capturedData?.userId) return capturedData.userId;
     if (req.user?.id) return req.user.id;
     const body = responseBodies.get(res);
     if (body?.user?.id) return body.user.id;
@@ -69,31 +150,36 @@ const generateDescription = (action, resource, resourceId, email) => {
     return `${who} realizó "${what}" en ${target}`;
 };
 
-async function saveAudit(req, res, action, resource) {
-    try {
-        const AuditConfig = db.AuditConfig;
-        if (AuditConfig) {
-            const config = await AuditConfig.findOne({
-                where: { resource, action },
-            });
-            if (config && !config.enabled) return;
+async function saveAuditWithRetry(req, res, action, resource, capturedData, maxRetries = 2) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            await saveAudit(req, res, action, resource, capturedData);
+            return;
+        } catch (err) {
+            if (attempt === maxRetries) {
+                console.error(`Audit save failed after ${maxRetries} retries:`, err.message);
+                return;
+            }
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
         }
+    }
+}
+
+async function saveAudit(req, res, action, resource, capturedData) {
+    try {
+        const enabled = await isAuditEnabled(resource, action);
+        if (!enabled) return;
 
         const resourceId = resourceIdFromPath(req.originalUrl) || req.params?.id || null;
-        const email = getEmail(req, res);
-        const userId = getUserId(req, res);
+        const email = getEmail(req, res, capturedData);
+        const userId = getUserId(req, res, capturedData);
 
         let oldValues = null;
-        if ((action === 'update' || action === 'delete') && resourceId && req.params?.id) {
+        if ((action === 'update' || action === 'delete') && resourceId) {
             try {
-                const modelMap = {
-                    users: db.Users,
-                    roles: db.Role,
-                    permissions: db.Permission,
-                };
-                const Model = modelMap[resource];
+                const Model = resolveModel(resource);
                 if (Model) {
-                    const record = await Model.findByPk(req.params.id);
+                    const record = await Model.findByPk(resourceId);
                     if (record) {
                         oldValues = record.toJSON();
                         delete oldValues.password;
@@ -134,6 +220,11 @@ export const autoAudit = () => {
         const resource = resourceFromPath(req.originalUrl);
         const action = actionFromMethod(req.method, req.originalUrl);
 
+        const capturedData = {
+            email: req.body?.email || null,
+            userId: req.user?.id || null,
+        };
+
         const originalJson = res.json.bind(res);
         res.json = function (body) {
             responseBodies.set(res, body);
@@ -141,7 +232,7 @@ export const autoAudit = () => {
         };
 
         res.on('finish', () => {
-            saveAudit(req, res, action, resource);
+            saveAuditWithRetry(req, res, action, resource, capturedData);
             responseBodies.delete(res);
         });
 
@@ -151,6 +242,11 @@ export const autoAudit = () => {
 
 export const audit = (resource, action) => {
     return (req, res, next) => {
+        const capturedData = {
+            email: req.body?.email || null,
+            userId: req.user?.id || null,
+        };
+
         const originalJson = res.json.bind(res);
         res.json = function (body) {
             responseBodies.set(res, body);
@@ -158,7 +254,7 @@ export const audit = (resource, action) => {
         };
 
         res.on('finish', () => {
-            saveAudit(req, res, action, resource);
+            saveAuditWithRetry(req, res, action, resource, capturedData);
             responseBodies.delete(res);
         });
 

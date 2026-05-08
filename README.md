@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-22+-green?style=for-the-badge&logo=node.js" alt="Node.js" />
   <img src="https://img.shields.io/badge/Express-4.x-blue?style=for-the-badge&logo=express" alt="Express" />
-  <img src="https://img.shields.io/badge/MySQL-8.0-orange?style=for-the-badge&logo=mysql" alt="MySQL" />
+  <img src="https://img.shields.io/badge/PostgreSQL-15+-blue?style=for-the-badge&logo=postgresql" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/Sequelize-6.x-purple?style=for-the-badge" alt="Sequelize" />
 </p>
 
@@ -29,8 +29,8 @@
 |---|---|
 | **Node.js 22+** | Runtime |
 | **Express.js** | HTTP framework |
-| **Sequelize** | ORM for MySQL |
-| **MySQL 8.0** | Relational database |
+| **Sequelize** | ORM for PostgreSQL |
+| **PostgreSQL 15+** | Relational database |
 | **Socket.IO** | Real-time websockets |
 | **JWT** | Token authentication |
 | **bcrypt** | Password hashing |
@@ -61,7 +61,7 @@ server/
 
 - **Node.js** >= 22.x
 - **npm** >= 9.x
-- **MySQL** 8.0
+- **PostgreSQL** 15+
 
 ### Installation
 
@@ -168,7 +168,7 @@ docker compose down
 | `DB_USER` | Database user | - |
 | `DB_PASSWORD` | Database password | - |
 | `DB_HOST` | Database host | `localhost` |
-| `DB_PORT` | Database port | `3306` |
+| `DB_PORT` | Database port | `5432` |
 | `PORT` | Server port | `3001` |
 | `NODE_ENV` | Environment | `development` |
 | `API_PREFIX` | API route prefix | `/api` |

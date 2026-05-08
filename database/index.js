@@ -19,7 +19,7 @@ let sequelize;
 sequelize = new Sequelize(currentEnvConfig.database, currentEnvConfig.username, currentEnvConfig.password, {
   host: currentEnvConfig.host,
   port: parseInt(currentEnvConfig.port, 10),
-  dialect: 'mysql',
+  dialect: 'postgres',
   timezone: '-06:00',
   pool: {
     max: 5,

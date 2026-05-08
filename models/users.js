@@ -46,6 +46,15 @@ export default (sequelize, DataTypes) => {
 				type: DataTypes.DATE,
 				allowNull: true,
 			},
+			loginAttempts: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				defaultValue: 0,
+			},
+			lockUntil: {
+				type: DataTypes.DATE,
+				allowNull: true,
+			},
 		},
 		{
 			tableName: "users",

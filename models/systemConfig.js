@@ -1,37 +1,37 @@
 export default (sequelize, DataTypes) => {
-	const AuditConfig = sequelize.define(
-		"AuditConfig",
+	const SystemConfig = sequelize.define(
+		'SystemConfig',
 		{
 			id: {
 				type: DataTypes.INTEGER,
 				autoIncrement: true,
 				primaryKey: true,
 			},
-			resource: {
+			key: {
 				type: DataTypes.STRING,
 				allowNull: false,
+				unique: true,
 			},
-			action: {
+			value: {
+				type: DataTypes.TEXT,
+				allowNull: true,
+			},
+			type: {
 				type: DataTypes.STRING,
 				allowNull: false,
+				defaultValue: 'string',
 			},
-			enabled: {
-				type: DataTypes.BOOLEAN,
-				defaultValue: true,
+			description: {
+				type: DataTypes.STRING,
+				allowNull: true,
 			},
 		},
 		{
-			tableName: "audit_config",
+			tableName: 'system_config',
 			timestamps: true,
 			paranoid: false,
-			indexes: [
-				{
-					unique: true,
-					fields: ['resource', 'action'],
-				}
-			]
 		}
 	);
 
-	return AuditConfig;
+	return SystemConfig;
 };

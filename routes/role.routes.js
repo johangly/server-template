@@ -4,6 +4,7 @@ import { verifyToken } from '../middleware/authMiddleware.js';
 import { hasPermission } from '../middleware/permissionMiddleware.js';
 import { canManageRole, preventPrivilegeEscalation } from '../middleware/privilegeMiddleware.js';
 import { autoAudit } from '../middleware/auditMiddleware.js';
+import { paginate } from '../utils/paginate.js';
 
 const router = express.Router();
 
@@ -11,14 +12,19 @@ router.use(autoAudit());
 
 router.get('/', [verifyToken, hasPermission('roles', 'read')], async (req, res) => {
     try {
-        const roles = await db.Role.findAll({
+        const result = await paginate(db.Role, {
+            page: req.query.page || 1,
+            limit: Math.min(parseInt(req.query.limit) || 10, 100),
+            search: req.query.search,
+            searchFields: ['name', 'description'],
+            order: [['createdAt', 'DESC']],
             include: [{
                 model: db.Permission,
                 as: 'permissions',
                 through: { attributes: [] },
             }],
         });
-        res.json(roles);
+        res.json(result);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch roles' });
     }

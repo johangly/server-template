@@ -2,7 +2,7 @@ import db from '../database/index.js';
 import express from 'express';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { hasPermission } from '../middleware/permissionMiddleware.js';
-import { autoAudit } from '../middleware/auditMiddleware.js';
+import { autoAudit, updateAuditConfigCache } from '../middleware/auditMiddleware.js';
 
 const router = express.Router();
 
@@ -39,6 +39,11 @@ router.put('/', [verifyToken, hasPermission('audit-config', 'update')], async (r
 
         const updatedConfigs = await db.AuditConfig.findAll({
             order: [['resource', 'ASC'], ['action', 'ASC']],
+        });
+
+        // Actualizar el cache en memoria
+        updatedConfigs.forEach(config => {
+            updateAuditConfigCache(config.resource, config.action, config.enabled);
         });
 
         res.json(updatedConfigs);

@@ -32,11 +32,11 @@ export default (sequelize, DataTypes) => {
 				allowNull: true,
 			},
 			oldValues: {
-				type: DataTypes.JSON,
+				type: DataTypes.JSONB,
 				allowNull: true,
 			},
 			newValues: {
-				type: DataTypes.JSON,
+				type: DataTypes.JSONB,
 				allowNull: true,
 			},
 			ip: {

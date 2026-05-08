@@ -71,4 +71,21 @@ router.delete('/cleanup', [verifyToken, hasPermission('audit-logs', 'delete')], 
     }
 });
 
+router.get('/filters', [verifyToken, hasPermission('audit-logs', 'read')], async (req, res) => {
+    try {
+        const [resources] = await db.sequelize.query(
+            'SELECT DISTINCT resource FROM audit_log ORDER BY resource ASC'
+        );
+        const [actions] = await db.sequelize.query(
+            'SELECT DISTINCT action FROM audit_log ORDER BY action ASC'
+        );
+        res.json({
+            resources: resources.map(r => r.resource),
+            actions: actions.map(a => a.action),
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch audit filters' });
+    }
+});
+
 export default router;
