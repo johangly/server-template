@@ -117,16 +117,21 @@ io.on("connection", (socket) => {
 // Hacer que io esté disponible en las rutas
 app.set("io", io);
 
-// Start server
-const PORT = process.env.PORT || 3001;
-db.sequelize
-	.authenticate()
-	.then(async () => {
-		await db.initialize();
-		server.listen(PORT, () => {
-			logger.info(`Server is running on port ${PORT}`);
+// Export app for testing
+export default app;
+
+// Start server (only if not in test mode)
+if (process.env.NODE_ENV !== 'test') {
+	const PORT = process.env.PORT || 3001;
+	db.sequelize
+		.authenticate()
+		.then(async () => {
+			await db.initialize();
+			server.listen(PORT, () => {
+				logger.info(`Server is running on port ${PORT}`);
+			});
+		})
+		.catch((err) => {
+			logger.error("Database connection error:", err);
 		});
-	})
-	.catch((err) => {
-		logger.error("Database connection error:", err);
-	});
+}
