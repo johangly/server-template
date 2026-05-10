@@ -128,6 +128,16 @@ app.set("io", io);
 // Export app for testing
 export default app;
 
+// Global error handlers
+process.on('unhandledRejection', (reason, promise) => {
+	logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+	logger.error('Uncaught Exception:', err);
+	process.exit(1);
+});
+
 // Start server (only if not in test mode)
 if (process.env.NODE_ENV !== 'test') {
 	const PORT = process.env.PORT || 3001;
