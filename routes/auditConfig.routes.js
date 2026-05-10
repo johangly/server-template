@@ -3,6 +3,8 @@ import express from 'express';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { hasPermission } from '../middleware/permissionMiddleware.js';
 import { autoAudit, updateAuditConfigCache } from '../middleware/auditMiddleware.js';
+import { validateRequest } from '../middleware/validateRequest.js';
+import { auditConfigSchema } from '../validators/schemas.js';
 
 const router = express.Router();
 
@@ -19,12 +21,9 @@ router.get('/', [verifyToken, hasPermission('audit-config', 'read')], async (req
     }
 });
 
-router.put('/', [verifyToken, hasPermission('audit-config', 'update')], async (req, res) => {
+router.put('/', [verifyToken, hasPermission('audit-config', 'update'), validateRequest(auditConfigSchema)], async (req, res) => {
     try {
         const { configs } = req.body;
-        if (!Array.isArray(configs)) {
-            return res.status(400).json({ error: 'configs must be an array' });
-        }
 
         await db.sequelize.transaction(async (t) => {
             for (const item of configs) {

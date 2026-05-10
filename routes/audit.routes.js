@@ -3,12 +3,15 @@ import express from 'express';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { hasPermission } from '../middleware/permissionMiddleware.js';
 import { autoAudit } from '../middleware/auditMiddleware.js';
+import { validateRequest, sanitizeRequest } from '../middleware/validateRequest.js';
+import { auditLogsQuerySchema } from '../validators/schemas.js';
 
 const router = express.Router();
 
 router.use(autoAudit());
+router.use(sanitizeRequest);
 
-router.get('/', [verifyToken, hasPermission('audit-logs', 'read')], async (req, res) => {
+router.get('/', [verifyToken, hasPermission('audit-logs', 'read'), validateRequest(auditLogsQuerySchema, 'query')], async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 50, 100);

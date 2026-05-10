@@ -2,6 +2,8 @@ import db from '../database/index.js';
 import express from 'express';
 import { verifyToken, isAdmin } from '../middleware/authMiddleware.js';
 import { autoAudit } from '../middleware/auditMiddleware.js';
+import { validateRequest } from '../middleware/validateRequest.js';
+import { systemConfigSchema } from '../validators/schemas.js';
 
 const router = express.Router();
 
@@ -18,12 +20,9 @@ router.get('/', [verifyToken, isAdmin], async (req, res) => {
     }
 });
 
-router.put('/', [verifyToken, isAdmin], async (req, res) => {
+router.put('/', [verifyToken, isAdmin, validateRequest(systemConfigSchema)], async (req, res) => {
     try {
         const { configs } = req.body;
-        if (!Array.isArray(configs)) {
-            return res.status(400).json({ error: 'configs must be an array' });
-        }
 
         await db.sequelize.transaction(async (t) => {
             for (const item of configs) {

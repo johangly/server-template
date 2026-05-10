@@ -8,10 +8,13 @@ import { preventPrivilegeEscalation } from '../middleware/privilegeMiddleware.js
 import logger from "../utils/logger.js";
 import { autoAudit } from '../middleware/auditMiddleware.js';
 import { paginate } from '../utils/paginate.js';
+import { validateRequest, sanitizeRequest } from '../middleware/validateRequest.js';
+import { createUserSchema, updateUserSchema, loginSchema } from '../validators/schemas.js';
 
 const router = express.Router()
 
 router.use(autoAudit());
+router.use(sanitizeRequest);
 
 const generateUserCode = () => 'USR' + Math.floor(1000 + Math.random() * 9000);
 
@@ -41,7 +44,7 @@ router.get('/', [verifyToken, isAdmin], async (req, res) => {
     }
 })
 
-router.post('/create-user', [verifyToken, isAdmin, preventPrivilegeEscalation], async (req, res) => {
+router.post('/create-user', [verifyToken, isAdmin, preventPrivilegeEscalation, validateRequest(createUserSchema)], async (req, res) => {
     const { name, email, password, roleId } = req.body
     const code = generateUserCode()
     const passwordHash = await hashPassword(password)
@@ -83,7 +86,7 @@ router.get('/:id',[verifyToken, isAdmin], async (req, res) => {
     }
 })
 
-router.put('/update-user/:id', [verifyToken, isAdmin, preventPrivilegeEscalation], async (req, res) => {
+router.put('/update-user/:id', [verifyToken, isAdmin, preventPrivilegeEscalation, validateRequest(updateUserSchema)], async (req, res) => {
     const { id } = req.params
     const { name, email, password, roleId, isActive } = req.body
 
@@ -116,7 +119,7 @@ router.put('/update-user/:id', [verifyToken, isAdmin, preventPrivilegeEscalation
     }
 })
 
-router.post('/login', loginLimiter, async (req, res) => {
+router.post('/login', loginLimiter, validateRequest(loginSchema), async (req, res) => {
     const { email, password } = req.body
 
     try {

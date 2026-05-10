@@ -16,6 +16,7 @@ import authRoutes from "./routes/auth.routes.js";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import jwt from 'jsonwebtoken';
+import { swaggerUi, specs } from './config/swagger.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -56,6 +57,13 @@ app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'API Documentation'
+}));
 
 app.use(`${API_PREFIX}/roles`, roleRoutes);
 app.use(`${API_PREFIX}/users`, userRoutes);

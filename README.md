@@ -15,7 +15,11 @@
 
 - 🔐 **JWT Authentication** — Secure token-based auth with expiration
 - 👥 **User Management** — Full CRUD with password hashing (bcrypt)
-- 🎭 **Role-Based Access Control** — Admin, User, Guest roles out of the box
+- 🎭 **Role-Based Access Control (RBAC)** — Dynamic permissions system
+- 🔒 **Account Locking** — Auto-lock after failed login attempts
+- 📧 **Password Recovery** — Email-based password reset
+- 📊 **Audit Logging** — Complete activity tracking
+- 📖 **Swagger/OpenAPI** — Interactive API documentation
 - 🛡️ **Security Stack** — Helmet, CORS, rate limiting, input validation
 - 📡 **Socket.IO** — Real-time communication ready
 - 📝 **Sequelize ORM** — Migrations, seeders, and model associations
@@ -37,6 +41,7 @@
 | **Winston** | Logging |
 | **Zod** | Schema validation |
 | **Helmet** | HTTP security headers |
+| **Swagger UI** | API documentation |
 
 ## 📁 Project Structure
 
@@ -66,19 +71,34 @@ server/
 ### Installation
 
 ```bash
-# 1. Install dependencies
+# 1. Setup completo (instala dependencias, crea DB, migra y seedea)
+npm run setup
+
+# 2. Iniciar servidor
+npm run dev
+
+# 3. Abrir documentación API
+# http://localhost:3001/api-docs
+```
+
+**O paso a paso manual:**
+
+```bash
+# 1. Instalar dependencias
 npm install
 
-# 2. Setup environment variables
+# 2. Configurar variables de entorno
 cp .env.example .env
-# Edit .env with your database credentials
+# Editar .env con tus credenciales
 
-# 3. Run migrations & seeds
-npm run migrate
-npm run seed:roles
-npm run seed:users
+# 3. Crear base de datos y ejecutar migraciones
+npm run db:create
+npm run db:migrate
 
-# 4. Start the server
+# 4. Ejecutar TODOS los seeders de una vez
+npm run db:seed:all
+
+# 5. Iniciar servidor
 npm run dev
 ```
 
@@ -120,6 +140,30 @@ All endpoints are prefixed with `API_PREFIX` (default: `/api`).
 | `GET` | `/health` | ❌ | Server health check |
 | `GET` | `/` | ❌ | API welcome message |
 
+## 📚 API Documentation (Swagger)
+
+Interactive API documentation is available at:
+
+```
+http://localhost:3001/api-docs
+```
+
+### Features:
+- 📖 **Complete documentation** of all endpoints
+- 🔐 **Integrated authentication** — Use the "Authorize" button to test protected endpoints
+- 🧪 **Live testing** — Execute requests directly from the browser
+- 📋 **Examples** — Request/response examples for each endpoint
+
+### Authenticating in Swagger UI:
+
+1. Click the **"Authorize"** button (top right)
+2. Enter your JWT token:
+   ```
+   Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   ```
+3. Click **"Authorize"** and close the dialog
+4. Now you can test protected endpoints
+
 ## 🔒 Authentication
 
 ### JWT Tokens
@@ -138,14 +182,27 @@ All endpoints are prefixed with `API_PREFIX` (default: `/api`).
 ## 📦 Available Scripts
 
 | Script | Description |
-|---|---|
+|--- |--- |
 | `npm run dev` | Start with hot-reload (development) |
 | `npm start` | Start in production mode |
-| `npm run migrate` | Run all pending migrations |
-| `npm run migration:revert` | Revert last migration |
-| `npm run seed:roles` | Seed default roles (Admin, User, Guest) |
-| `npm run seed:users` | Seed default admin user |
+| **Setup** ||
+| `npm run setup` | 🚀 Complete setup (install + DB + migrate + seed) |
+| `npm run setup:fresh` | 🧹 Fresh setup (delete and recreate everything) |
+| **Database** ||
+| `npm run db:create` | Create database |
+| `npm run db:drop` | Drop database |
+| `npm run db:migrate` | Run pending migrations |
+| `npm run db:migrate:undo` | Revert last migration |
+| `npm run db:seed:all` | 🌟 Run ALL seeders at once |
+| `npm run db:reset` | 🔄 Complete reset (drop + create + migrate + seed) |
+| `npm run seed:roles` | Seed only roles |
+| `npm run seed:users` | Seed only admin user |
+| **Testing** ||
 | `npm test` | Run test suite |
+| `npm run test:watch` | Tests in watch mode |
+| `npm run test:coverage` | Tests with coverage |
+| **Documentation** ||
+| `npm run docs:serve` | Show Swagger URL and start server |
 
 ## 🐳 Docker
 

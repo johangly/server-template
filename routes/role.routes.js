@@ -5,10 +5,13 @@ import { hasPermission } from '../middleware/permissionMiddleware.js';
 import { canManageRole, preventPrivilegeEscalation } from '../middleware/privilegeMiddleware.js';
 import { autoAudit } from '../middleware/auditMiddleware.js';
 import { paginate } from '../utils/paginate.js';
+import { validateRequest, sanitizeRequest } from '../middleware/validateRequest.js';
+import { createRoleSchema, updateRoleSchema, assignPermissionsSchema } from '../validators/schemas.js';
 
 const router = express.Router();
 
 router.use(autoAudit());
+router.use(sanitizeRequest);
 
 router.get('/', [verifyToken, hasPermission('roles', 'read')], async (req, res) => {
     try {
@@ -30,7 +33,7 @@ router.get('/', [verifyToken, hasPermission('roles', 'read')], async (req, res) 
     }
 });
 
-router.post('/create-role', [verifyToken, hasPermission('roles', 'create')], async (req, res) => {
+router.post('/create-role', [verifyToken, hasPermission('roles', 'create'), validateRequest(createRoleSchema)], async (req, res) => {
     const { name, description, permissionIds } = req.body;
     try {
         const userPermissions = req.user.permissions || [];
@@ -92,7 +95,7 @@ router.get('/:id', [verifyToken, hasPermission('roles', 'read')], async (req, re
     }
 });
 
-router.put('/update-role/:id', [verifyToken, hasPermission('roles', 'update'), canManageRole], async (req, res) => {
+router.put('/update-role/:id', [verifyToken, hasPermission('roles', 'update'), canManageRole, validateRequest(updateRoleSchema)], async (req, res) => {
     const { id } = req.params;
     const { name, description } = req.body;
     try {
@@ -144,7 +147,7 @@ router.get('/:id/permissions', [verifyToken, hasPermission('roles', 'read')], as
     }
 });
 
-router.put('/:id/permissions', [verifyToken, hasPermission('roles', 'update'), canManageRole], async (req, res) => {
+router.put('/:id/permissions', [verifyToken, hasPermission('roles', 'update'), canManageRole, validateRequest(assignPermissionsSchema)], async (req, res) => {
     const { id } = req.params;
     const { permissionIds } = req.body;
     try {

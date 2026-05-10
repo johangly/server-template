@@ -4,17 +4,16 @@ import crypto from 'crypto';
 import { hashPassword } from '../utils/hashedAndComparePassword.js';
 import { sendPasswordResetEmail, testEmailConnection } from '../utils/email.js';
 import { autoAudit } from '../middleware/auditMiddleware.js';
+import { validateRequest } from '../middleware/validateRequest.js';
+import { forgotPasswordSchema, resetPasswordSchema } from '../validators/schemas.js';
 
 const router = express.Router();
 
 router.use(autoAudit());
 
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', validateRequest(forgotPasswordSchema), async (req, res) => {
     try {
         const { email } = req.body;
-        if (!email) {
-            return res.status(400).json({ error: 'Email is required' });
-        }
 
         const config = await db.SystemConfig.findOne({ where: { key: 'password_recovery_enabled' } });
         if (!config || config.value !== 'true') {
@@ -47,16 +46,9 @@ router.post('/forgot-password', async (req, res) => {
     }
 });
 
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', validateRequest(resetPasswordSchema), async (req, res) => {
     try {
         const { token, password } = req.body;
-        if (!token || !password) {
-            return res.status(400).json({ error: 'Token and password are required' });
-        }
-
-        if (password.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters' });
-        }
 
         const resetToken = await db.PasswordResetToken.findOne({
             where: { token, used: false },

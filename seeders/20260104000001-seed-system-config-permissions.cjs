@@ -43,7 +43,7 @@ module.exports = {
 			const adminRoleId = roles[0].id;
 
 			const existingRolePerms = await queryInterface.sequelize.query(
-				'SELECT permissionId FROM role_permission WHERE roleId = :roleId AND permissionId IN (:permIds)',
+				'SELECT "permissionId" FROM role_permission WHERE "roleId" = :roleId AND "permissionId" IN (:permIds)',
 				{
 					replacements: {
 						roleId: adminRoleId,
@@ -57,10 +57,10 @@ module.exports = {
 			const toAssign = newPerms
 				.filter(p => !existingPermIds.has(p.id))
 				.map(p => ({
-					roleId: adminRoleId,
-					permissionId: p.id,
-					createdAt: new Date(),
-					updatedAt: new Date(),
+					"roleId": adminRoleId,
+					"permissionId": p.id,
+					"createdAt": new Date(),
+					"updatedAt": new Date(),
 				}));
 
 			if (toAssign.length > 0) {

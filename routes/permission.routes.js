@@ -3,6 +3,8 @@ import express from 'express';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { hasPermission } from '../middleware/permissionMiddleware.js';
 import { autoAudit } from '../middleware/auditMiddleware.js';
+import { validateRequest } from '../middleware/validateRequest.js';
+import { createPermissionSchema, updatePermissionSchema } from '../validators/schemas.js';
 
 const router = express.Router();
 
@@ -17,7 +19,7 @@ router.get('/', [verifyToken, hasPermission('permissions', 'read')], async (req,
     }
 });
 
-router.post('/create-permission', [verifyToken, hasPermission('permissions', 'create')], async (req, res) => {
+router.post('/create-permission', [verifyToken, hasPermission('permissions', 'create'), validateRequest(createPermissionSchema)], async (req, res) => {
     const { name, description, resource, action } = req.body;
     try {
         const newPermission = await db.Permission.create({
@@ -46,7 +48,7 @@ router.get('/:id', [verifyToken, hasPermission('permissions', 'read')], async (r
     }
 });
 
-router.put('/update-permission/:id', [verifyToken, hasPermission('permissions', 'update')], async (req, res) => {
+router.put('/update-permission/:id', [verifyToken, hasPermission('permissions', 'update'), validateRequest(updatePermissionSchema)], async (req, res) => {
     const { id } = req.params;
     const { name, description, resource, action } = req.body;
     try {
