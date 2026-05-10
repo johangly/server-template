@@ -175,7 +175,7 @@ router.post('/login', loginLimiter, validateRequest(loginSchema), async (req, re
                 through: { attributes: [] },
             }],
         })
-        const permissions = role ? role.permissions.map((p) => ({
+        const permissions = role && role.permissions ? role.permissions.map((p) => ({
             id: p.id,
             name: p.name,
             resource: p.resource,
