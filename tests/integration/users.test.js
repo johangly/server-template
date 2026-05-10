@@ -1,5 +1,6 @@
+import { expect } from 'chai';
 import request from 'supertest';
-import app from '../index.js';
+import app from '../../index.js';
 import db from '../database/index';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -53,9 +54,9 @@ describe('Users Endpoints', () => {
         .get('/api/users')
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('data');
-      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.status).to.equal(200);
+      expect(res.body).to.have.property('data');
+      expect(Array.isArray(res.body.data)).to.equal(true);
       expect(res.body.data.length).toBeGreaterThanOrEqual(2);
     });
 
@@ -63,7 +64,7 @@ describe('Users Endpoints', () => {
       const res = await request(app)
         .get('/api/users');
 
-      expect(res.status).toBe(401);
+      expect(res.status).to.equal(401);
     });
 
     it('should reject access with invalid token', async () => {
@@ -71,7 +72,7 @@ describe('Users Endpoints', () => {
         .get('/api/users')
         .set('Authorization', 'Bearer invalid-token');
 
-      expect(res.status).toBe(401);
+      expect(res.status).to.equal(401);
     });
   });
 
@@ -81,10 +82,10 @@ describe('Users Endpoints', () => {
         .get(`/api/users/${regularUser.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body.id).toBe(regularUser.id);
-      expect(res.body.email).toBe('user@example.com');
-      expect(res.body).not.toHaveProperty('password');
+      expect(res.status).to.equal(200);
+      expect(res.body.id).to.equal(regularUser.id);
+      expect(res.body.email).to.equal('user@example.com');
+      expect(res.body).not.to.have.property('password');
     });
 
     it('should return 404 for non-existent user', async () => {
@@ -92,7 +93,7 @@ describe('Users Endpoints', () => {
         .get('/api/users/99999')
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(404);
+      expect(res.status).to.equal(404);
     });
   });
 
@@ -111,16 +112,16 @@ describe('Users Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(newUser);
 
-      expect(res.status).toBe(201);
-      expect(res.body.email).toBe(newUser.email);
-      expect(res.body.name).toBe(newUser.name);
-      expect(res.body).not.toHaveProperty('password');
+      expect(res.status).to.equal(201);
+      expect(res.body.email).to.equal(newUser.email);
+      expect(res.body.name).to.equal(newUser.name);
+      expect(res.body).not.to.have.property('password');
 
       // Verify in database
       const createdUser = await db.Users.findOne({
         where: { email: newUser.email }
       });
-      expect(createdUser).toBeTruthy();
+      expect(createdUser).to.be.ok;
     });
 
     it('should reject duplicate email', async () => {
@@ -136,7 +137,7 @@ describe('Users Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(duplicateUser);
 
-      expect(res.status).toBe(400);
+      expect(res.status).to.equal(400);
     });
 
     it('should require all mandatory fields', async () => {
@@ -150,7 +151,7 @@ describe('Users Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(incompleteUser);
 
-      expect(res.status).toBe(400);
+      expect(res.status).to.equal(400);
     });
   });
 
@@ -166,9 +167,9 @@ describe('Users Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(updates);
 
-      expect(res.status).toBe(200);
-      expect(res.body.name).toBe(updates.name);
-      expect(res.body.isActive).toBe(updates.isActive);
+      expect(res.status).to.equal(200);
+      expect(res.body.name).to.equal(updates.name);
+      expect(res.body.isActive).to.equal(updates.isActive);
     });
 
     it('should allow user to update own profile', async () => {
@@ -181,7 +182,7 @@ describe('Users Endpoints', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .send(updates);
 
-      expect(res.status).toBe(200);
+      expect(res.status).to.equal(200);
     });
 
     it('should not allow user to update other users profile', async () => {
@@ -194,7 +195,7 @@ describe('Users Endpoints', () => {
         .set('Authorization', `Bearer ${userToken}`)
         .send(updates);
 
-      expect(res.status).toBe(403);
+      expect(res.status).to.equal(403);
     });
   });
 
@@ -204,12 +205,12 @@ describe('Users Endpoints', () => {
         .delete(`/api/users/delete-user/${regularUser.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(200);
+      expect(res.status).to.equal(200);
       expect(res.body.message).toContain('eliminado');
 
       // Verify deletion
       const deletedUser = await db.Users.findByPk(regularUser.id);
-      expect(deletedUser).toBeNull();
+      expect(deletedUser).to.be.null;
     });
 
     it('should not allow deleting own account', async () => {
@@ -217,7 +218,7 @@ describe('Users Endpoints', () => {
         .delete(`/api/users/delete-user/${adminUser.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(400);
+      expect(res.status).to.equal(400);
     });
   });
 
@@ -233,13 +234,13 @@ describe('Users Endpoints', () => {
         .put(`/api/users/unlock-user/${regularUser.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(200);
+      expect(res.status).to.equal(200);
       expect(res.body.message).toContain('desbloqueado');
 
       // Verify unlock
       const unlockedUser = await db.Users.findByPk(regularUser.id);
-      expect(unlockedUser.loginAttempts).toBe(0);
-      expect(unlockedUser.lockUntil).toBeNull();
+      expect(unlockedUser.loginAttempts).to.equal(0);
+      expect(unlockedUser.lockUntil).to.be.null;
     });
   });
 });

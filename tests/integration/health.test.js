@@ -1,13 +1,14 @@
+import { expect } from 'chai';
 import request from 'supertest';
-import app from '../index.js';
+import app from '../../index.js';
 
 describe('Health Endpoints', () => {
   describe('GET /', () => {
     it('should return API welcome message', async () => {
       const res = await request(app).get('/');
 
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('message');
+      expect(res.status).to.equal(200);
+      expect(res.body).to.have.property('message');
       expect(res.body.message).toContain('API');
     });
   });
@@ -16,11 +17,11 @@ describe('Health Endpoints', () => {
     it('should return health status', async () => {
       const res = await request(app).get('/api/health');
 
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('status');
-      expect(res.body.status).toBe('OK');
-      expect(res.body).toHaveProperty('timestamp');
-      expect(res.body).toHaveProperty('version');
+      expect(res.status).to.equal(200);
+      expect(res.body).to.have.property('status');
+      expect(res.body.status).to.equal('OK');
+      expect(res.body).to.have.property('timestamp');
+      expect(res.body).to.have.property('version');
     });
   });
 
@@ -28,9 +29,9 @@ describe('Health Endpoints', () => {
     it('should return database health status', async () => {
       const res = await request(app).get('/api/health/db');
 
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('database');
-      expect(res.body.database).toBe('connected');
+      expect(res.status).to.equal(200);
+      expect(res.body).to.have.property('database');
+      expect(res.body.database).to.equal('connected');
     });
   });
 });

@@ -1,5 +1,6 @@
+import { expect } from 'chai';
 import request from 'supertest';
-import app from '../index.js';
+import app from '../../index.js';
 import db from '../database/index';
 import bcrypt from 'bcrypt';
 
@@ -30,11 +31,11 @@ describe('Authentication Endpoints', () => {
           password: 'password123'
         });
 
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('token');
-      expect(res.body).toHaveProperty('user');
-      expect(res.body.user.email).toBe('test@example.com');
-      expect(res.body.user).not.toHaveProperty('password');
+      expect(res.status).to.equal(200);
+      expect(res.body).to.have.property('token');
+      expect(res.body).to.have.property('user');
+      expect(res.body.user.email).to.equal('test@example.com');
+      expect(res.body.user).not.to.have.property('password');
     });
 
     it('should reject login with invalid password', async () => {
@@ -45,9 +46,9 @@ describe('Authentication Endpoints', () => {
           password: 'wrongpassword'
         });
 
-      expect(res.status).toBe(401);
-      expect(res.body).toHaveProperty('error');
-      expect(res.body).toHaveProperty('remainingAttempts');
+      expect(res.status).to.equal(401);
+      expect(res.body).to.have.property('error');
+      expect(res.body).to.have.property('remainingAttempts');
     });
 
     it('should reject login with non-existent email', async () => {
@@ -58,8 +59,8 @@ describe('Authentication Endpoints', () => {
           password: 'password123'
         });
 
-      expect(res.status).toBe(404);
-      expect(res.body).toHaveProperty('error');
+      expect(res.status).to.equal(404);
+      expect(res.body).to.have.property('error');
     });
 
     it('should reject login for inactive user', async () => {
@@ -72,8 +73,8 @@ describe('Authentication Endpoints', () => {
           password: 'password123'
         });
 
-      expect(res.status).toBe(403);
-      expect(res.body).toHaveProperty('error');
+      expect(res.status).to.equal(403);
+      expect(res.body).to.have.property('error');
     });
 
     it('should lock account after max failed attempts', async () => {
@@ -95,7 +96,7 @@ describe('Authentication Endpoints', () => {
           password: 'wrongpassword'
         });
 
-      expect(res.status).toBe(429);
+      expect(res.status).to.equal(429);
       expect(res.body.error).toContain('bloqueada');
     });
 
@@ -107,7 +108,7 @@ describe('Authentication Endpoints', () => {
           password: 'wrongpassword'
         });
 
-      expect(res.status).toBe(401);
+      expect(res.status).to.equal(401);
       expect(res.body.remainingAttempts).toBeLessThan(5);
       expect(res.body.remainingAttempts).toBeGreaterThanOrEqual(0);
     });
@@ -130,7 +131,7 @@ describe('Authentication Endpoints', () => {
         .post('/api/users/logout')
         .send({ email: 'test@example.com' });
 
-      expect(res.status).toBe(200);
+      expect(res.status).to.equal(200);
       expect(res.body.message).toContain('logout');
     });
   });
@@ -141,14 +142,14 @@ describe('Authentication Endpoints', () => {
         .post('/api/auth/forgot-password')
         .send({ email: 'test@example.com' });
 
-      expect(res.status).toBe(200);
+      expect(res.status).to.equal(200);
       expect(res.body.message).toContain('email');
 
       // Verify token was created
       const token = await db.PasswordResetToken.findOne({
         where: { userId: testUser.id }
       });
-      expect(token).toBeTruthy();
+      expect(token).to.be.ok;
     });
 
     it('should reject password reset for non-existent email', async () => {
@@ -157,7 +158,7 @@ describe('Authentication Endpoints', () => {
         .send({ email: 'nonexistent@example.com' });
 
       // Should return 200 even if email doesn't exist (security)
-      expect(res.status).toBe(200);
+      expect(res.status).to.equal(200);
     });
 
     it('should reset password with valid token', async () => {
@@ -175,13 +176,13 @@ describe('Authentication Endpoints', () => {
           password: 'newpassword123'
         });
 
-      expect(res.status).toBe(200);
+      expect(res.status).to.equal(200);
       expect(res.body.message).toContain('actualizada');
 
       // Verify password was changed
       const updatedUser = await db.Users.findByPk(testUser.id);
       const isMatch = await bcrypt.compare('newpassword123', updatedUser.password);
-      expect(isMatch).toBe(true);
+      expect(isMatch).to.equal(true);
     });
 
     it('should reject invalid reset token', async () => {
@@ -192,7 +193,7 @@ describe('Authentication Endpoints', () => {
           password: 'newpassword123'
         });
 
-      expect(res.status).toBe(400);
+      expect(res.status).to.equal(400);
     });
   });
 });

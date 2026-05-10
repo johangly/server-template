@@ -1,5 +1,6 @@
+import { expect } from 'chai';
 import request from 'supertest';
-import app from '../index.js';
+import app from '../../index.js';
 import db from '../database/index';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -40,8 +41,8 @@ describe('Roles Endpoints', () => {
         .get('/api/roles')
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.status).to.equal(200);
+      expect(Array.isArray(res.body)).to.equal(true);
       expect(res.body.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -60,7 +61,7 @@ describe('Roles Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       const foundRole = res.body.find(r => r.id === testRole.id);
-      expect(foundRole).toBeTruthy();
+      expect(foundRole).to.be.ok;
     });
   });
 
@@ -70,9 +71,9 @@ describe('Roles Endpoints', () => {
         .get(`/api/roles/${testRole.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body.id).toBe(testRole.id);
-      expect(res.body.name).toBe('Test Role');
+      expect(res.status).to.equal(200);
+      expect(res.body.id).to.equal(testRole.id);
+      expect(res.body.name).to.equal('Test Role');
     });
 
     it('should return 404 for non-existent role', async () => {
@@ -80,7 +81,7 @@ describe('Roles Endpoints', () => {
         .get('/api/roles/99999')
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(404);
+      expect(res.status).to.equal(404);
     });
   });
 
@@ -96,15 +97,15 @@ describe('Roles Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(newRole);
 
-      expect(res.status).toBe(201);
-      expect(res.body.name).toBe(newRole.name);
-      expect(res.body.description).toBe(newRole.description);
+      expect(res.status).to.equal(201);
+      expect(res.body.name).to.equal(newRole.name);
+      expect(res.body.description).to.equal(newRole.description);
 
       // Verify in database
       const createdRole = await db.Role.findOne({
         where: { name: newRole.name }
       });
-      expect(createdRole).toBeTruthy();
+      expect(createdRole).to.be.ok;
     });
 
     it('should reject duplicate role name', async () => {
@@ -118,7 +119,7 @@ describe('Roles Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(duplicateRole);
 
-      expect(res.status).toBe(400);
+      expect(res.status).to.equal(400);
     });
 
     it('should require role name', async () => {
@@ -127,7 +128,7 @@ describe('Roles Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ description: 'Missing name' });
 
-      expect(res.status).toBe(400);
+      expect(res.status).to.equal(400);
     });
   });
 
@@ -143,9 +144,9 @@ describe('Roles Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send(updates);
 
-      expect(res.status).toBe(200);
-      expect(res.body.name).toBe(updates.name);
-      expect(res.body.description).toBe(updates.description);
+      expect(res.status).to.equal(200);
+      expect(res.body.name).to.equal(updates.name);
+      expect(res.body.description).to.equal(updates.description);
     });
 
     it('should not update role to duplicate name', async () => {
@@ -160,7 +161,7 @@ describe('Roles Endpoints', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ name: 'Test Role' }); // Name already exists
 
-      expect(res.status).toBe(400);
+      expect(res.status).to.equal(400);
     });
   });
 
@@ -170,12 +171,12 @@ describe('Roles Endpoints', () => {
         .delete(`/api/roles/delete-role/${testRole.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(200);
+      expect(res.status).to.equal(200);
       expect(res.body.message).toContain('eliminado');
 
       // Verify deletion
       const deletedRole = await db.Role.findByPk(testRole.id);
-      expect(deletedRole).toBeNull();
+      expect(deletedRole).to.be.null;
     });
 
     it('should not delete role with assigned users', async () => {
@@ -186,7 +187,7 @@ describe('Roles Endpoints', () => {
         .delete(`/api/roles/delete-role/${testRole.id}`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(400);
+      expect(res.status).to.equal(400);
     });
   });
 
@@ -196,8 +197,8 @@ describe('Roles Endpoints', () => {
         .get(`/api/roles/${testRole.id}/permissions`)
         .set('Authorization', `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.status).to.equal(200);
+      expect(Array.isArray(res.body)).to.equal(true);
     });
 
     it('should update role permissions', async () => {
@@ -221,11 +222,11 @@ describe('Roles Endpoints', () => {
           permissions: [perm1.id, perm2.id]
         });
 
-      expect(res.status).toBe(200);
+      expect(res.status).to.equal(200);
 
       // Verify permissions were assigned
       const rolePerms = await testRole.getPermissions();
-      expect(rolePerms.length).toBe(2);
+      expect(rolePerms.length).to.equal(2);
     });
   });
 });

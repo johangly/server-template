@@ -7,12 +7,11 @@
 	"scripts": {
 		"start": "node index.js",
 		"dev": "nodemon index.js",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage",
-		"test:auth": "vitest run tests/integration/auth.test.js",
-		"test:users": "vitest run tests/integration/users.test.js",
-		"test:roles": "vitest run tests/integration/roles.test.js",
+		"test": "NODE_ENV=test mocha --experimental-specifier-resolution=node",
+		"test:watch": "NODE_ENV=test mocha --experimental-specifier-resolution=node --watch",
+		"test:auth": "NODE_ENV=test mocha --experimental-specifier-resolution=node tests/integration/auth.test.js",
+		"test:users": "NODE_ENV=test mocha --experimental-specifier-resolution=node tests/integration/users.test.js",
+		"test:roles": "NODE_ENV=test mocha --experimental-specifier-resolution=node tests/integration/roles.test.js",
 		"test:ci": "npm run setup:test && npm run test",
 		"db:create": "npx sequelize-cli db:create",
 		"db:drop": "npx sequelize-cli db:drop",
@@ -52,10 +51,11 @@
 		"zod": "^4.0.15"
 	},
 	"devDependencies": {
-		"@vitest/coverage-v8": "^4.1.5",
+		"chai": "^6.2.2",
+		"chai-http": "^5.1.2",
+		"mocha": "^11.7.5",
 		"nodemon": "^3.0.2",
 		"sequelize-cli": "^6.6.3",
-		"supertest": "^6.3.3",
-		"vitest": "^4.1.5"
+		"supertest": "^6.3.3"
 	}
 }
