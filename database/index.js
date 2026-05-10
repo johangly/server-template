@@ -63,7 +63,15 @@ db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
 db.initialize = async () => {
-  await loadAndAssociateModels();
+  if (!db._initialized) {
+    await loadAndAssociateModels();
+    db._initialized = true;
+  }
 };
+
+// Auto-initialize in test environment
+if (process.env.NODE_ENV === 'test' && process.env.TEST_DB_INITIALIZED !== 'true') {
+  await db.initialize();
+}
 
 export default db;

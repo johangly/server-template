@@ -1,8 +1,14 @@
-// Mocha setup file
-import db from './database/index.js';
+// Mocha root hooks for ESM
+// Este archivo debe ser cargado con --import
+
+import { before, after } from 'mocha';
+import db from '../database/index.js';
 
 // Make db available globally for tests
 global.db = db;
+
+console.log('📝 Loading mocha-setup.js...');
+console.log('📝 Database imported:', Object.keys(db));
 
 // Setup before all tests
 before(async function() {
@@ -10,6 +16,7 @@ before(async function() {
   try {
     await db.initialize();
     console.log('✅ Test database initialized');
+    console.log('Available models:', Object.keys(db).filter(k => k !== 'sequelize' && k !== 'Sequelize' && k !== 'initialize'));
   } catch (error) {
     console.error('❌ Failed to initialize test database:', error);
     throw error;

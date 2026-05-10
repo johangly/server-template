@@ -9,6 +9,7 @@
 		"dev": "nodemon index.js",
 		"test": "NODE_ENV=test mocha --experimental-specifier-resolution=node 'tests/**/*.test.js'",
 		"test:watch": "NODE_ENV=test mocha --experimental-specifier-resolution=node 'tests/**/*.test.js' --watch",
+		"test:watch": "NODE_ENV=test mocha --experimental-specifier-resolution=node 'tests/**/*.test.js' --watch",
 		"test:auth": "NODE_ENV=test mocha --experimental-specifier-resolution=node tests/integration/auth.test.js",
 		"test:users": "NODE_ENV=test mocha --experimental-specifier-resolution=node tests/integration/users.test.js",
 		"test:roles": "NODE_ENV=test mocha --experimental-specifier-resolution=node tests/integration/roles.test.js",

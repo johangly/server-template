@@ -1,8 +1,14 @@
 import { expect } from 'chai';
 import request from 'supertest';
 import app from '../../index.js';
-import db from '../database/index';
+import db from '../../database/index.js';
 import bcrypt from 'bcrypt';
+
+// Initialize database before tests
+before(async function() {
+  this.timeout(30000);
+  await db.initialize();
+});
 import jwt from 'jsonwebtoken';
 
 describe('Roles Endpoints', () => {
