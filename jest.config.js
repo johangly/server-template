@@ -1,12 +1,12 @@
+/** @type {import('jest').Config} */
 export default {
   testEnvironment: 'node',
   transform: {},
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^(\\.{1,2}/.*)$': '$1.js',
   },
   testMatch: [
-    '**/tests/**/*.test.js',
-    '**/__tests__/**/*.js'
+    '**/tests/**/*.test.js'
   ],
   collectCoverageFrom: [
     'routes/**/*.js',

@@ -1,6 +1,6 @@
 import request from 'supertest';
-import app from '../index.js';
-import db from '../database/index.js';
+import app from '../index';
+import db from '../database/index';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
