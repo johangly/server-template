@@ -252,6 +252,121 @@ Respuesta esperada:
 
 ---
 
+## 🧪 Testing
+
+El proyecto incluye tests de integración con **Jest** y **Supertest**. Los tests usan una base de datos separada para no interferir con tu entorno de desarrollo.
+
+### Configuración de Base de Datos para Tests
+
+Los tests usan la base de datos `template_test` (configurada en `.env.test`). Esto aísla los tests de tu base de datos de desarrollo.
+
+**Archivos de configuración:**
+- `.env.test` - Variables de entorno para tests
+- `config/config.js` - Configuración de conexión a la DB de test
+
+### Setup Inicial de Tests
+
+```bash
+# Setup completo de la base de datos de test (solo primera vez)
+npm run setup:test
+```
+
+Este comando:
+1. ✅ Instala dependencias
+2. ✅ Crea la base de datos `template_test`
+3. ✅ Ejecuta migraciones
+4. ✅ Ejecuta seeders con datos de prueba
+
+### Scripts de Testing
+
+```bash
+# Ejecutar todos los tests
+npm run test
+
+# Ejecutar tests en modo watch (durante desarrollo)
+npm run test:watch
+
+# Tests con cobertura de código
+npm run test:coverage
+
+# Tests específicos
+npm run test:auth    # Solo tests de autenticación
+npm run test:users   # Solo tests de usuarios
+npm run test:roles   # Solo tests de roles
+
+# CI/CD - Setup + Tests completos
+npm run test:ci
+```
+
+### Scripts de Base de Datos de Test
+
+```bash
+# Crear base de datos de test
+npm run db:create:test
+
+# Eliminar base de datos de test
+npm run db:drop:test
+
+# Ejecutar migraciones en test DB
+npm run db:migrate:test
+
+# Ejecutar seeders en test DB
+npm run db:seed:all:test
+
+# Reset completo de test DB
+npm run db:reset:test
+```
+
+### Flujo de Trabajo de Testing
+
+**Primera vez:**
+```bash
+npm run setup:test    # Crea DB de test con datos
+npm run test          # Ejecuta tests
+```
+
+**Durante desarrollo:**
+```bash
+npm run test:watch    # Tests en modo watch
+```
+
+**Antes de commit:**
+```bash
+npm run test:ci       # Verifica que todo pase
+```
+
+**Si los datos de test se corrompen:**
+```bash
+npm run db:reset:test  # Resetea y recrea la DB de test
+```
+
+### Tests Incluidos
+
+| Archivo | Descripción |
+|---------|-------------|
+| `tests/integration/auth.test.js` | Login, logout, bloqueo de cuenta, recuperación de contraseña |
+| `tests/integration/users.test.js` | CRUD de usuarios, paginación |
+| `tests/integration/roles.test.js` | Gestión de roles y permisos |
+| `tests/integration/health.test.js` | Health checks del servidor |
+
+### Solución de Problemas en Tests
+
+**Error: "database does not exist"**
+```bash
+npm run db:create:test
+```
+
+**Error: "relation users does not exist"**
+```bash
+npm run db:migrate:test
+npm run db:seed:all:test
+```
+
+**Error: "Validation Error: extensionsToTreatAsEsm"**
+- ✅ Ya corregido: Eliminado del jest.config.js (se infiere automáticamente de `type: module` en package.json)
+
+---
+
 ## Documentación API
 
 La API incluye documentación interactiva con **Swagger UI**.
