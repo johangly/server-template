@@ -23,7 +23,7 @@ export const verifyToken = async (req, res, next) => {
             });
 
             if (role) {
-                req.user.permissions = role.permissions.map((p) => ({
+                req.user.permissions = (role.permissions || []).map((p) => ({
                     id: p.id,
                     name: p.name,
                     resource: p.resource,
@@ -43,7 +43,12 @@ export const verifyToken = async (req, res, next) => {
 };
 
 export const isAdmin = (req, res, next) => {
-    if (req.user && req.user.role && req.user.role.name && req.user.role.name.toLowerCase() === 'admin') {
+    // Check if user has role object with name 'admin'
+    const hasAdminRoleName = req.user && req.user.role && req.user.role.name && req.user.role.name.toLowerCase() === 'admin';
+    // Check if user has roleId 1 (admin role ID)
+    const hasAdminRoleId = req.user && (req.user.roleId === 1 || req.user.role === 1);
+    
+    if (hasAdminRoleName || hasAdminRoleId) {
         next();
     } else {
         res.status(403).json({ error: 'Access denied. Admins only.' });

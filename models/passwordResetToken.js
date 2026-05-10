@@ -29,6 +29,7 @@ export default (sequelize, DataTypes) => {
 			tableName: 'password_reset_tokens',
 			timestamps: true,
 			paranoid: false,
+			updatedAt: false, // Table only has createdAt, not updatedAt
 		}
 	);
 

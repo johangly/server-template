@@ -17,7 +17,7 @@ export const validateRequest = (schema, source = 'body') => {
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
-        const errors = error.errors.map(err => ({
+        const issues = (error.issues || error.errors || []).map(err => ({
           field: err.path.join('.'),
           message: err.message
         }));
@@ -25,7 +25,7 @@ export const validateRequest = (schema, source = 'body') => {
         return res.status(400).json({
           success: false,
           message: 'Error de validación',
-          errors: errors.map(e => `${e.field}: ${e.message}`)
+          errors: issues.map(e => `${e.field}: ${e.message}`)
         });
       }
       

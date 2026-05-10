@@ -4,6 +4,11 @@ export const preventPrivilegeEscalation = async (req, res, next) => {
     const userPermissions = req.user.permissions || [];
     const userPermissionIds = userPermissions.map((p) => p.id);
 
+    // If no roleId is provided, skip privilege escalation check
+    if (!req.body.roleId) {
+        return next();
+    }
+
     const targetRole = await db.Role.findByPk(req.body.roleId, {
         include: [{
             model: db.Permission,
@@ -16,7 +21,7 @@ export const preventPrivilegeEscalation = async (req, res, next) => {
         return res.status(404).json({ error: 'Role not found' });
     }
 
-    const targetRolePermissionIds = targetRole.permissions.map((p) => p.id);
+    const targetRolePermissionIds = (targetRole.permissions || []).map((p) => p.id);
     const hasMorePermissions = targetRolePermissionIds.some((id) => !userPermissionIds.includes(id));
 
     if (hasMorePermissions) {
@@ -45,7 +50,7 @@ export const canManageRole = async (req, res, next) => {
         return res.status(404).json({ error: 'Role not found' });
     }
 
-    const targetRolePermissionIds = targetRole.permissions.map((p) => p.id);
+    const targetRolePermissionIds = (targetRole.permissions || []).map((p) => p.id);
     const hasMorePermissions = targetRolePermissionIds.some((id) => !userPermissionIds.includes(id));
 
     if (hasMorePermissions) {

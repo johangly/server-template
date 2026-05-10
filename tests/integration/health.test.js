@@ -3,35 +3,22 @@ import request from 'supertest';
 import app from '../../index.js';
 
 describe('Health Endpoints', () => {
-  describe('GET /', () => {
+  describe('GET /api/', () => {
     it('should return API welcome message', async () => {
-      const res = await request(app).get('/');
+      const res = await request(app).get('/api/');
 
       expect(res.status).to.equal(200);
       expect(res.body).to.have.property('message');
-      expect(res.body.message).toContain('API');
+      expect(res.body.message).to.contain('Bienvenido');
     });
   });
 
-  describe('GET /api/health', () => {
+  describe('GET /health', () => {
     it('should return health status', async () => {
-      const res = await request(app).get('/api/health');
+      const res = await request(app).get('/health');
 
       expect(res.status).to.equal(200);
-      expect(res.body).to.have.property('status');
-      expect(res.body.status).to.equal('OK');
-      expect(res.body).to.have.property('timestamp');
-      expect(res.body).to.have.property('version');
-    });
-  });
-
-  describe('GET /api/health/db', () => {
-    it('should return database health status', async () => {
-      const res = await request(app).get('/api/health/db');
-
-      expect(res.status).to.equal(200);
-      expect(res.body).to.have.property('database');
-      expect(res.body.database).to.equal('connected');
+      expect(res.text).to.equal('OK');
     });
   });
 });

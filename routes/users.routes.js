@@ -20,7 +20,7 @@ const generateUserCode = () => 'USR' + Math.floor(1000 + Math.random() * 9000);
 
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5,
+    max: process.env.NODE_ENV === 'test' ? 1000 : 5, // Disable rate limiting in tests
     message: 'Demasiados intentos de inicio de sesión, por favor intente de nuevo en 15 minutos.',
     standardHeaders: true,
     legacyHeaders: false,
@@ -65,7 +65,10 @@ router.post('/create-user', [verifyToken, isAdmin, preventPrivilegeEscalation, v
             isActive: true
         })
         logger.info(`User created: ${newUser.name}`)
-        res.status(201).json(newUser)
+        // Remove password from response
+        const userResponse = newUser.toJSON();
+        delete userResponse.password;
+        res.status(201).json(userResponse)
     } catch (error) {
         logger.error('Failed to create user', error)
         res.status(500).json({ error: 'Failed to create user' })
@@ -79,7 +82,10 @@ router.get('/:id',[verifyToken, isAdmin], async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'User not found' })
         }
-        return res.json(user)
+        // Remove password from response
+        const userResponse = user.toJSON();
+        delete userResponse.password;
+        return res.json(userResponse)
     } catch (error) {
         logger.error('Failed to fetch user', error)
         res.status(500).json({ error: 'Failed to fetch user' })
@@ -112,7 +118,10 @@ router.put('/update-user/:id', [verifyToken, isAdmin, preventPrivilegeEscalation
         }
 
         await user.update(updateData);
-        res.json(user)
+        // Remove password from response
+        const userResponse = user.toJSON();
+        delete userResponse.password;
+        res.json(userResponse)
     } catch (error) {
         logger.error('Failed to update user', error)
         res.status(500).json({ error: 'Failed to update user' })

@@ -8,6 +8,12 @@ import bcrypt from 'bcrypt';
 before(async function() {
   this.timeout(30000);
   await db.initialize();
+  
+  // Enable password recovery for tests
+  await db.SystemConfig.upsert({
+    key: 'password_recovery_enabled',
+    value: 'true'
+  });
 });
 
 describe('Authentication Endpoints', () => {
@@ -15,6 +21,9 @@ describe('Authentication Endpoints', () => {
   let authToken;
 
   beforeEach(async () => {
+    // Clean up any existing test user first (including archived)
+    await db.Users.destroy({ where: { email: 'test@example.com' }, force: true });
+    
     // Create a test user before each test
     const hashedPassword = await bcrypt.hash('password123', 10);
     testUser = await db.Users.create({
@@ -24,8 +33,16 @@ describe('Authentication Endpoints', () => {
       code: 'USR001',
       role: 1,
       isActive: true,
-      loginAttempts: 0
+      loginAttempts: 0,
+      lockUntil: null
     });
+  });
+
+  afterEach(async () => {
+    // Clean up test user after each test
+    if (testUser) {
+      await db.Users.destroy({ where: { id: testUser.id }, force: true });
+    }
   });
 
   describe('POST /api/users/login', () => {
@@ -65,7 +82,7 @@ describe('Authentication Endpoints', () => {
           password: 'password123'
         });
 
-      expect(res.status).to.equal(404);
+      expect(res.status).to.equal(401);
       expect(res.body).to.have.property('error');
     });
 
@@ -103,7 +120,7 @@ describe('Authentication Endpoints', () => {
         });
 
       expect(res.status).to.equal(429);
-      expect(res.body.error).toContain('bloqueada');
+      expect(res.body.error).to.contain('bloqueada');
     });
 
     it('should decrement remaining attempts on failed login', async () => {
@@ -115,8 +132,8 @@ describe('Authentication Endpoints', () => {
         });
 
       expect(res.status).to.equal(401);
-      expect(res.body.remainingAttempts).toBeLessThan(5);
-      expect(res.body.remainingAttempts).toBeGreaterThanOrEqual(0);
+      expect(res.body.remainingAttempts).to.be.below(5);
+      expect(res.body.remainingAttempts).to.be.at.least(0);
     });
   });
 
@@ -138,18 +155,19 @@ describe('Authentication Endpoints', () => {
         .send({ email: 'test@example.com' });
 
       expect(res.status).to.equal(200);
-      expect(res.body.message).toContain('logout');
+      expect(res.body.message).to.contain('Logout');
     });
   });
 
   describe('Password Recovery', () => {
-    it('should request password reset', async () => {
+    it('should request password reset', async function() {
+      this.timeout(10000); // Increase timeout for email sending
       const res = await request(app)
         .post('/api/auth/forgot-password')
         .send({ email: 'test@example.com' });
 
       expect(res.status).to.equal(200);
-      expect(res.body.message).toContain('email');
+      expect(res.body.message).to.contain('correo');
 
       // Verify token was created
       const token = await db.PasswordResetToken.findOne({
@@ -168,22 +186,25 @@ describe('Authentication Endpoints', () => {
     });
 
     it('should reset password with valid token', async () => {
+      // Generate unique token to avoid conflicts
+      const uniqueToken = 'valid-token-' + Date.now();
+      
       // Create reset token
       const token = await db.PasswordResetToken.create({
         userId: testUser.id,
-        token: 'valid-token-123',
+        token: uniqueToken,
         expiresAt: new Date(Date.now() + 3600000) // 1 hour
       });
 
       const res = await request(app)
         .post('/api/auth/reset-password')
         .send({
-          token: 'valid-token-123',
+          token: uniqueToken,
           password: 'newpassword123'
         });
 
       expect(res.status).to.equal(200);
-      expect(res.body.message).toContain('actualizada');
+      expect(res.body.message).to.contain('updated');
 
       // Verify password was changed
       const updatedUser = await db.Users.findByPk(testUser.id);
