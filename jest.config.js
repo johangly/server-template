@@ -3,7 +3,7 @@ export default {
   testEnvironment: 'node',
   transform: {},
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)$': '$1.js',
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   testMatch: [
     '**/tests/**/*.test.js'
@@ -25,5 +25,8 @@ export default {
   },
   setupFilesAfterEnv: ['./tests/setup.js'],
   testTimeout: 30000,
-  verbose: true
+  verbose: true,
+  // Importante: esto ayuda con la resolución de módulos
+  moduleFileExtensions: ['js', 'json', 'node'],
+  roots: ['<rootDir>']
 };

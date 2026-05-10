@@ -7,12 +7,12 @@
 	"scripts": {
 		"start": "node index.js",
 		"dev": "nodemon index.js",
-		"test": "NODE_OPTIONS=--experimental-vm-modules jest",
-		"test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
-		"test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-		"test:auth": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration/auth.test.js",
-		"test:users": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration/users.test.js",
-		"test:roles": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration/roles.test.js",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"test:auth": "vitest run tests/integration/auth.test.js",
+		"test:users": "vitest run tests/integration/users.test.js",
+		"test:roles": "vitest run tests/integration/roles.test.js",
 		"test:ci": "npm run setup:test && npm run test",
 		"db:create": "npx sequelize-cli db:create",
 		"db:drop": "npx sequelize-cli db:drop",
@@ -52,9 +52,10 @@
 		"zod": "^4.0.15"
 	},
 	"devDependencies": {
-		"jest": "^29.7.0",
+		"@vitest/coverage-v8": "^4.1.5",
 		"nodemon": "^3.0.2",
 		"sequelize-cli": "^6.6.3",
-		"supertest": "^6.3.3"
+		"supertest": "^6.3.3",
+		"vitest": "^4.1.5"
 	}
 }

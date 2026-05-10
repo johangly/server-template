@@ -44,7 +44,8 @@ async function loadAndAssociateModels() {
 
   console.log("Modelos cargados:");
   for (const file of modelFiles) {
-    const modelModule = await import(`../models/${file}`);
+    const modelName = file.replace('.js', '');
+    const modelModule = await import(`../models/${modelName}.js`);
     const modelDefinitionFunction = modelModule.default;
     const model = modelDefinitionFunction(sequelize, Sequelize.DataTypes);
     db[model.name] = model;
